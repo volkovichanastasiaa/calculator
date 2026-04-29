@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Калькулятор Воріт PRO</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+    :root {
+        --primary: #2563eb;
+        --success: #16a34a;
+        --danger: #ef4444;
+        --bg: #f1f5f9;
+        --card: #ffffff;
+        --text: #1e293b;
+    }
+
+    body {
+        font-family: 'Segoe UI', Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        margin: 0;
+        padding: 15px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .main-container {
+        display: flex;
+        gap: 20px;
+        max-width: 1300px;
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .setup-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .result-column {
+        width: 500px;
+        position: sticky;
+        top: 15px;
+    }
+
+    .box {
+        background: var(--card);
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+
+    h3 { margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+
+    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    
+    select, input { 
+        padding: 8px; 
+        border: 1px solid #cbd5e1; 
+        border-radius: 6px; 
+        font-size: 14px;
+        flex: 1;
+    }
+
+    button {
+        cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 15px;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+
+    .btn-add { background: var(--primary); color: white; }
+    .btn-add:hover { background: #1d4ed8; }
+
+    .btn-toggle { 
+        background: #f8fafc; 
+        color: #475569; 
+        border: 1px solid #e2e8f0; 
+        width: 100%; 
+        margin-bottom: 5px; 
+        text-align: left;
+        font-size: 13px;
+    }
+    
+    .btn-toggle.active { 
+        background: var(--success); 
+        color: white; 
+        border-color: var(--success);
+    }
+
+    #items div {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 8px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #f1f5f9;
+        gap: 15px;
+    }
+
+    .receipt-header {
+        font-weight: 800;
+        font-size: 11px;
+        color: #1e293b;
+        background: #f8fafc;
+        padding: 5px 8px;
+        margin: 10px 0 5px 0;
+        text-transform: uppercase;
+        border-left: 3px solid var(--primary);
+    }
+
+    #items div span:first-child { flex: 1; line-height: 1.4; }
+
+    .area-tag {
+        color: #94a3b8;
+        font-size: 11px;
+        margin-left: 5px;
+        font-weight: normal;
+    }
+
+    .remove-btn { background: none; color: var(--danger); font-size: 18px; padding: 0 5px; }
+
+    #total {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--primary);
+        text-align: right;
+        padding-top: 15px;
+        border-top: 2px solid var(--primary);
+        margin-top: 10px;
+    }
+
+    .lookup-info {
+        font-size: 11px;
+        color: #6366f1;
+        background: #eef2ff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+
+    .section-input-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr 80px 40px;
+        gap: 8px;
+        margin-bottom: 8px;
+        align-items: center;
+    }
+
+    .install-custom-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+    }
+
+    .install-card {
+        background: #f8fafc;
+        padding: 8px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .install-card span { font-size: 10px; font-weight: bold; color: #64748b; }
+    .install-card input { padding: 4px; font-size: 12px; }
+    .install-card button { padding: 5px; font-size: 11px; }
+
+    .sub-title { font-size: 11px; color: #94a3b8; font-weight: bold; margin: 10px 0 5px 0; text-transform: uppercase; }
+
+    @media (max-width: 900px) {
+        .main-container { flex-direction: column; }
+        .result-column { width: 100%; position: relative; top: 0; }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="main-container">
+    <div class="setup-column">
+        <h2 style="margin:0 0 10px 0;">Калькулятор ворот</h2>
+
+        <div class="box">
+            <h3>Розпашні ворота</h3>
+            <div class="row">
+                <input type="number" id="sw_w" placeholder="Ширина (мм)" oninput="showLookup('sw')">
+                <input type="number" id="sw_h" placeholder="Висота (мм)" oninput="showLookup('sw')">
+                <button class="btn-add" onclick="addSwing()">Додати</button>
+            </div>
+            <div id="sw_lookup_display" class="lookup-info" style="display:none;"></div>
+        </div>
+
+        <div class="box">
+            <h3>Відкатні ворота</h3>
+            <div class="row">
+                <input type="number" id="sl_w" placeholder="Ширина (мм)" oninput="showLookup('sl')">
+                <input type="number" id="sl_h" placeholder="Висота (мм)" oninput="showLookup('sl')">
+                <button class="btn-add" onclick="addSliding()" style="background:#6366f1">Додати</button>
+            </div>
+            <div id="sl_lookup_display" class="lookup-info" style="display:none;"></div>
+        </div>
+
+        <div class="box">
+            <h3>Хвіртка</h3>
+            <div class="row">
+                <input type="number" id="wk_w_custom" step="0.1" value="1" placeholder="Ш (м)">
+                <input type="number" id="wk_h_custom" step="0.1" value="2" placeholder="В (м)">
+            </div>
+            <div class="row">
+                <input type="number" id="wk_frame" placeholder="Каркас" value="9500">
+                <input type="number" id="wk_lock" placeholder="Замок" value="5500">
+                <button class="btn-add" onclick="addWicket()" style="background:#8b5cf6">Додати</button>
+            </div>
+        </div>
+
+        <div class="box">
+            <h3>Стовпи</h3>
+            <div class="row">
+                <input type="number" id="post_60_qty" placeholder="60х60 (шт)" min="0">
+                <button class="btn-add" onclick="addPosts(60)" style="background:#475569">Додати 60х60</button>
+            </div>
+            <div class="row">
+                <input type="number" id="post_100_qty" placeholder="100х100 (шт)" min="0">
+                <button class="btn-add" onclick="addPosts(100)" style="background:#475569">Додати 100х100</button>
+            </div>
+        </div>
+
+        <div class="box">
+            <h3>Секції паркану</h3>
+            <div id="sectionsContainer"></div>
+            <div id="sections_len_info" style="font-size: 10px; color: #94a3b8; margin-bottom: 10px; font-weight: bold;">Погонних метрів секцій: 0 м/п</div>
+            <button class="btn-add" onclick="addSectionRow()" style="background:#10b981; margin-bottom:15px; width: 100%;"> + Додати нову секцію</button>
+            <div class="row">
+                <input type="number" id="applyHeightInput" placeholder="Висота для всіх (мм)">
+                <button onclick="applyHeightToAll()">Застосувати</button>
+            </div>
+            <div class="row" style="margin-top:10px; background: #f8fafc; padding: 10px; border-radius: 8px;">
+                <select id="sheathing" onchange="calculate()">
+                    <option value="0">Без зашивки</option>
+                    <option value="1800">Ранчо 80 (1800грн/м²)</option>
+                    <option value="1250">Жалюзі Классік</option>
+                    <option value="600">Жалюзі Лего</option>
+                </select>
+                <button id="assemblyBtn" onclick="toggleAssembly()" class="btn-toggle" style="width:auto; margin:0;">Збірка +350</button>
+            </div>
+        </div>
+
+        <div class="box">
+            <h3>Монтаж та роботи</h3>
+            <div class="grid-btns">
+                <button onclick="toggleFoundation()" id="foundationBtn" class="btn-toggle">Фундамент 3300 м/п</button>
+                <button onclick="toggleParapet()" id="parapetBtn" class="btn-toggle">Парапет 380 м/п</button>
+                <button onclick="toggleInstallSections()" id="installSectionsBtn" class="btn-toggle">Монтаж секцій 350 м2</button>
+                <button onclick="toggleInstallParapet()" id="installParapetBtn" class="btn-toggle">Монтаж парапету 150 м/п</button>
+            </div>
+            <div class="sub-title">Додаткові послуги</div>
+            <div class="install-custom-grid">
+                <div class="install-card"><span>Монтаж розпашних</span><input type="number" id="price_swing_install" value="7000"><button onclick="addInstallSwing()">+ Додати</button></div>
+                <div class="install-card"><span>Монтаж відкатних</span><input type="number" id="price_sliding_install" value="7500"><button onclick="addInstallSliding()">+ Додати</button></div>
+                <div class="install-card"><span>Монтаж хвіртки</span><input type="number" id="price_wicket_install" value="4500"><button onclick="addInstallWicket()">+ Додати</button></div>
+                <div class="install-card" style="border:1px solid #6366f1;"><span>Транспорт</span><input type="number" id="price_transport" value="3500"><button onclick="addTransport()" style="background:#6366f1;color:white;">+ Додати</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="result-column">
+        <div class="box">
+            <h3>Поточний розрахунок</h3>
+            <div id="items"></div>
+            <div style="font-size: 12px; color: #64748b; line-height: 1.6; margin-bottom: 10px;">
+                <div id="sectionsTotal">Секції: 0 м²</div>
+                <div id="sectionsLength">Загальна довжина (в т.ч. ворота): 0 м/п</div>
+            </div>
+            <div id="total">Всього: 0 грн</div>
+
+            <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+                <input type="text" id="file_name" placeholder="Назва об'єкта для Excel" style="width:100%; margin: 5px 0 10px 0;">
+                <button onclick="exportToExcel()" style="background:var(--success); color:white; width:100%;">💾 Зберегти Розрахунок</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let items = [];
+let services = [];
+let sections = [];
+let assembly = false, parapet = false, foundation = false, installParapet = false, installSections = false;
+let lastCalcData = {};
+
+const swingPrices = {
+    "3": { "1.6": 11586, "1.7": 11641, "1.8": 11697, "1.9": 11753, "2": 11809 },
+    "3.5": { "1.6": 11864, "1.7": 11920, "1.8": 11967, "1.9": 12032, "2": 12088 },
+    "4": { "1.6": 12143, "1.7": 12199, "1.8": 12255, "1.9": 12311, "2": 12366 },
+    "4.5": { "1.6": 12645, "1.7": 12738, "1.8": 12831, "1.9": 12924, "2": 13017 },
+    "5": { "1.6": 13296, "1.7": 13389, "1.8": 13482, "1.9": 13575, "2": 13668 }
+};
+
+const slidingPrices = {
+    "3": { "1.7": 14208, "1.8": 14234, "1.9": 14260, "2": 14287 },
+    "3.5": { "1.7": 14916, "1.8": 14942, "1.9": 14969, "2": 14995 },
+    "4": { "1.7": 15530, "1.8": 15557, "1.9": 15583, "2": 15609 },
+    "4.5": { "1.7": 16125, "1.8": 16152, "1.9": 16178, "2": 16205 },
+    "5": { "1.7": 16525, "1.8": 16551, "1.9": 16578, "2": 16604 }
+};
+
+function findClosest(val, obj) {
+    let keys = Object.keys(obj).map(Number);
+    return keys.reduce((prev, curr) => (Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev));
+}
+
+function showLookup(type) {
+    let wInput = document.getElementById(type+"_w").value, hInput = document.getElementById(type+"_h").value;
+    let disp = document.getElementById(type+"_lookup_display");
+    if(wInput && hInput) {
+        let w = Number(wInput), h = Number(hInput);
+        let t = type==='sw'?swingPrices:slidingPrices;
+        let wL = findClosest(w/1000, t), hL = findClosest(h/1000, t[wL]);
+        disp.style.display="block"; disp.innerText = `🔍 Ціна за базою: ${wL}м x ${hL}м`;
+    } else disp.style.display="none";
+}
+
+function addSwing(){
+    let w = Number(sw_w.value), h = Number(sw_h.value);
+    if(!w || !h) return alert("Введіть розміри!");
+    let wL = findClosest(w/1000, swingPrices), hL = findClosest(h/1000, swingPrices[wL]);
+    items.push({ 
+        type: "swing", 
+        name: `Ворота розпашні ${w} х ${h} мм, зварені з труби 60х60, фарбовані поліуретановою фарбою + нащільники 60х40`, 
+        w: w/1000, h: h/1000, wL, hL, areaStr: (w*h/1000000).toFixed(2) 
+    }); 
+    calculate();
+}
+
+function addSliding(){
+    let w = Number(sl_w.value), h = Number(sl_h.value);
+    if(!w || !h) return alert("Введіть розміри!");
+    let wL = findClosest(w/1000, slidingPrices), hL = findClosest(h/1000, slidingPrices[wL]);
+    items.push({ 
+        type: "sliding", 
+        name: `Ворота відкатні ${w} х ${h} мм, зварені з труби 60х60 та 80х60, фурнітура 800 кг, фарбовані поліуретановою фарбою + нащільники 60х40 та 80х40`, 
+        w: w/1000, h: h/1000, wL, hL, areaStr: (w*h/1000000).toFixed(2) 
+    }); 
+    calculate();
+}
+
+function addWicket(){
+    let w = Number(wk_w_custom.value)*1000, h = Number(wk_h_custom.value)*1000;
+    items.push({
+        type: "wicket",
+        name: `Хвіртка ${w} х ${h} мм, зварена з труби 60х60, фарбована поліуретановою фарбою + нащільники 60х40 + замок електромеханічний Atis + ручка профільна з нержавійки`,
+        w: w/1000, h: h/1000, frame: Number(wk_frame.value), lock: Number(wk_lock.value), areaStr: (w*h/1000000).toFixed(2)
+    });
+    calculate();
+}
+
+function addPosts(size) {
+    let qtyInput = document.getElementById(`post_${size}_qty`);
+    let qty = Number(qtyInput.value);
+    if(qty <= 0) return alert("Введіть кількість стовпів!");
+    let price = size === 60 ? 1820 : 2443;
+    items.push({
+        type: "post",
+        name: `Стовп металевий ${size}х${size}, шт`,
+        price: price,
+        qty: qty,
+        areaStr: "шт"
+    });
+    qtyInput.value = "";
+    calculate();
+}
+
+function addTransport(){ services.push({name:"Транспортні послуги, шт", price: Number(price_transport.value)}); calculate(); }
+function addInstallSwing(){ services.push({name:"Монтаж розпашних воріт, шт", price: Number(price_swing_install.value)}); calculate(); }
+function addInstallSliding(){ services.push({name:"Монтаж відкатних воріт, шт", price: Number(price_sliding_install.value)}); calculate(); }
+function addInstallWicket(){ services.push({name:"Монтаж хвіртки + замок + ручки, шт", price: Number(price_wicket_install.value)}); calculate(); }
+
+function addSectionRow(){ sections.push({w:0, h:0}); renderSections(); }
+function renderSections(){
+    const box = document.getElementById("sectionsContainer"); box.innerHTML = "";
+    let sLen = 0;
+    sections.forEach((s,i)=>{
+        let area = (s.w*s.h/1000000).toFixed(2);
+        sLen += s.w/1000;
+        box.innerHTML += `<div class="section-input-group">
+            <input type="number" value="${s.w||''}" placeholder="Ш (мм)" onchange="sections[${i}].w=+this.value; renderSections(); calculate()">
+            <input type="number" value="${s.h||''}" placeholder="В (мм)" onchange="sections[${i}].h=+this.value; renderSections(); calculate()">
+            <span style="font-size:11px; color:#64748b; background:#f1f5f9; padding:8px; border-radius:6px; text-align:center;">${area} м²</span>
+            <button class="remove-btn" onclick="sections.splice(${i},1); renderSections(); calculate()">×</button>
+        </div>`;
+    });
+    document.getElementById("sections_len_info").innerText = `Погонних метрів секцій: ${sLen.toFixed(2)} м/п`;
+}
+
+function calculate(){
+    let gatesArea = 0, wicketArea = 0, sArea = 0, tLen = 0, baseItemsTotal = 0, postQty = 0;
+    
+    items.forEach(i => {
+        let p = 0; 
+        if(i.type === "post") {
+            p = i.price * i.qty;
+            postQty += i.qty;
+        } else {
+            i.area = i.w * i.h;
+            tLen += i.w; // Ворота та хвіртки тепер теж рахуються в загальну довжину (tLen)
+            if(i.type === "sliding") p = slidingPrices[i.wL][i.hL] * 2 + 3200;
+            else if(i.type === "swing") p = swingPrices[i.wL][i.hL] * 2 + 3200;
+            else if(i.type === "wicket") p = i.frame + i.lock;
+            (i.type === "wicket" ? wicketArea += i.area : gatesArea += i.area);
+        }
+        i.curPrice = p; baseItemsTotal += p;
+    });
+
+    sections.forEach(s => { 
+        sArea += (s.w*s.h)/1000000; 
+        tLen += s.w/1000; 
+    });
+
+    let totalArea = gatesArea + wicketArea + sArea;
+    let sP = Number(sheathing.value);
+    let unitP = sP + (assembly && sP > 0 ? 350 : 0);
+    let sT = totalArea * unitP;
+    
+    let baseServicesTotal = 0;
+    services.forEach(s => baseServicesTotal += s.price);
+    
+    let pT = parapet ? tLen * 380 : 0, 
+        fT = foundation ? tLen * 3300 : 0, 
+        ipT = installParapet ? tLen * 150 : 0, 
+        isT = installSections ? totalArea * 350 : 0,
+        iPostT = postQty * 1300; 
+
+    let baseShName = sheathing.options[sheathing.selectedIndex].text.split(' (')[0];
+    let finalShName = assembly && sP > 0 ? baseShName + " (зібрані)" : baseShName;
+
+    lastCalcData = { 
+        shName: finalShName, sT, totalArea, unitP, pT, tLen, fT, ipT, isT, iPostT, postQty,
+        itemsTotal: baseItemsTotal + sT, 
+        servicesTotal: baseServicesTotal + pT + fT + ipT + isT + iPostT, 
+        grandTotal: baseItemsTotal + sT + baseServicesTotal + pT + fT + ipT + isT + iPostT
+    };
+
+    document.getElementById("total").innerText = "Всього: " + Math.round(lastCalcData.grandTotal).toLocaleString() + " грн";
+    document.getElementById("sectionsTotal").innerText = `Секції: ${sArea.toFixed(2)} м²`;
+    document.getElementById("sectionsLength").innerText = `Загальна довжина (в т.ч. ворота): ${tLen.toFixed(2)} м/п`;
+    renderReceipt();
+}
+
+function renderReceipt(){
+    let box = document.getElementById("items"); box.innerHTML = "";
+    box.innerHTML += `<div class="receipt-header">ОБЛАДНАННЯ ТА ТОВАРИ</div>`;
+    items.forEach((i, idx) => {
+        let label = i.type === "post" ? `${i.name} <span class="area-tag">${i.qty} шт</span>` : `${i.name} <span class="area-tag">(${i.areaStr} м²)</span>`;
+        box.innerHTML += `<div><span>${label}</span><span>${Math.round(i.curPrice).toLocaleString()} грн <button class="remove-btn" onclick="items.splice(${idx},1); calculate()">×</button></span></div>`;
+    });
+    if(lastCalcData.sT > 0) box.innerHTML += `<div><span>Секції ${lastCalcData.shName} <span class="area-tag">(${lastCalcData.totalArea.toFixed(2)} м²)</span></span><span>${Math.round(lastCalcData.sT).toLocaleString()} грн</span></div>`;
+    
+    box.innerHTML += `<div class="receipt-header">МОНТАЖ ТА РОБОТИ</div>`;
+    let sList = [...services];
+    const d = lastCalcData;
+    if(d.iPostT > 0) sList.push({ name: `Монтаж стовпа, шт`, price: d.iPostT, areaTag: `(${d.postQty} шт)` });
+    if(d.isT > 0) sList.push({ name: `Монтаж секцій, м2`, price: d.isT, areaTag: `(${d.totalArea.toFixed(2)} м²)` });
+    if(d.ipT > 0) sList.push({ name: `Монтаж парапету, м/п`, price: d.ipT, areaTag: `(${d.tLen.toFixed(1)} м/п)` });
+    if(d.fT > 0) sList.push({ name: `Фундамент стрічковий, м/п`, price: d.fT, areaTag: `(${d.tLen.toFixed(1)} м/п)` });
+    if(d.pT > 0) sList.push({ name: `Парапет металевий, м/п`, price: d.pT, areaTag: `(${d.tLen.toFixed(1)} м/п)` });
+
+    sList.sort((a, b) => {
+        if(a.name.toLowerCase().includes("транспорт")) return 1;
+        if(b.name.toLowerCase().includes("транспорт")) return -1;
+        if(a.name.toLowerCase().startsWith("монтаж") && !b.name.toLowerCase().startsWith("монтаж")) return -1;
+        return 0;
+    });
+
+    sList.forEach((s) => {
+        let tag = s.areaTag ? ` <span class="area-tag">${s.areaTag}</span>` : "";
+        let isAuto = ["Монтаж стовпа, шт", "Монтаж секцій, м2", "Монтаж парапету, м/п", "Фундамент стрічковий, м/п", "Парапет металевий, м/п"].includes(s.name);
+        let remove = isAuto ? "" : ` <button class="remove-btn" onclick="removeServiceByName('${s.name}'); calculate()">×</button>`;
+        box.innerHTML += `<div><span>${s.name}${tag}</span><span>${Math.round(s.price).toLocaleString()} грн${remove}</span></div>`;
+    });
+}
+
+function removeServiceByName(name){
+    let idx = services.findIndex(s => s.name === name);
+    if(idx !== -1) services.splice(idx, 1);
+}
+
+function exportToExcel() {
+    const d = lastCalcData;
+    const name = document.getElementById("file_name").value.trim() || "Прорахунок";
+    const dateStr = new Date().toLocaleDateString('uk-UA');
+    const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+
+    let data = Array(80).fill(null).map(() => Array(15).fill(""));
+    let infoR = 1, colStart = 4;
+    data[infoR][colStart] = "ФОП Джуман Давид Олегович";
+    data[infoR+1][colStart] = "Поштова адреса: Україна, 08176, Київська обл., Бучанський р-н, с. Софіївська Борщагівка,";
+    data[infoR+2][colStart] = "вул. Шалімова академіка, буд. 69, корп. 6, кв. 41. ЄДРПОУ 3708006310";
+    data[infoR+3][colStart] = `IBAN: UA163220010000026008320030177 в АТ "УНІВЕРСАЛ БАНК"`;
+    data[infoR+4][colStart] = "МФО 322001. Тел. +380979649747";
+    data[infoR+6][colStart] = `Комерційна пропозиція від ${dateStr}р.`;
+
+    let r = 9, start1 = r; 
+    data[r][colStart] = "ОБЛАДНАННЯ:"; r++;
+    let head1 = r; 
+    data[r][colStart] = "№"; data[r][colStart+1] = "Назва"; data[r][colStart+2] = "Ціна, грн"; data[r][colStart+3] = "К-сть"; data[r][colStart+4] = "Сума, грн"; r++;
+
+    let i = 1;
+    items.forEach(it => {
+        data[r][colStart] = i++;
+        data[r][colStart+1] = it.name; // Тепер тут чиста назва без "5 шт" у дужках
+        data[r][colStart+2] = Math.round(it.type === "post" ? it.price : it.curPrice);
+        data[r][colStart+3] = it.type === "post" ? it.qty.toFixed(2).replace('.', ',') : "1,00";
+        data[r][colStart+4] = Math.round(it.curPrice);
+        r++;
+    });
+
+    if(d.sT > 0){
+        data[r][colStart] = i++;
+        data[r][colStart+1] = `Секції ${d.shName}, м2`;
+        data[r][colStart+2] = Math.round(d.unitP);
+        data[r][colStart+3] = d.totalArea.toFixed(2).replace('.', ',');
+        data[r][colStart+4] = Math.round(d.sT);
+        r++;
+    }
+
+    if(d.pT > 0){
+        data[r][colStart] = i++;
+        data[r][colStart+1] = "Парапет металевий, м/п";
+        data[r][colStart+2] = 380;
+        data[r][colStart+3] = d.tLen.toFixed(1).replace('.', ',');
+        data[r][colStart+4] = Math.round(d.pT);
+        r++;
+    }
+
+    data[r][colStart+3] = "Всього:";
+    data[r][colStart+4] = Math.round(d.itemsTotal);
+    let end1 = r; r += 2;
+
+    let start2 = r;
+    data[r][colStart] = "МОНТАЖНІ РОБОТИ:"; r++;
+    let head2 = r;
+    data[r][colStart] = "№"; data[r][colStart+1] = "Назва"; data[r][colStart+2] = "Ціна, грн"; data[r][colStart+3] = "К-сть"; data[r][colStart+4] = "Сума, грн"; r++;
+
+    let j = 1;
+    if(d.iPostT > 0){
+        data[r][colStart] = j++; data[r][colStart+1] = "Монтаж стовпа, шт"; data[r][colStart+2] = 1300;
+        data[r][colStart+3] = d.postQty.toFixed(2).replace('.', ','); data[r][colStart+4] = Math.round(d.iPostT); r++;
+    }
+
+    services.forEach(s => {
+        data[r][colStart] = j++; data[r][colStart+1] = s.name; data[r][colStart+2] = Math.round(s.price);
+        data[r][colStart+3] = "1,00"; data[r][colStart+4] = Math.round(s.price); r++;
+    });
+
+    if(d.isT > 0){
+        data[r][colStart] = j++; data[r][colStart+1] = `Монтаж секцій, м2`; data[r][colStart+2] = 350;
+        data[r][colStart+3] = d.totalArea.toFixed(2).replace('.', ','); data[r][colStart+4] = Math.round(d.isT); r++;
+    }
+    if(d.ipT > 0){
+        data[r][colStart] = j++; data[r][colStart+1] = "Монтаж парапету, м/п"; data[r][colStart+2] = 150;
+        data[r][colStart+3] = d.tLen.toFixed(1).replace('.', ','); data[r][colStart+4] = Math.round(d.ipT); r++;
+    }
+    if(d.fT > 0){
+        data[r][colStart] = j++; data[r][colStart+1] = "Фундамент стрічковий, м/п"; data[r][colStart+2] = 3300;
+        data[r][colStart+3] = d.tLen.toFixed(1).replace('.', ','); data[r][colStart+4] = Math.round(d.fT); r++;
+    }
+
+    data[r][colStart+3] = "Всього:";
+    data[r][colStart+4] = Math.round(d.servicesTotal);
+    let end2 = r; r += 2;
+
+    data[r][colStart+1] = "ЗАГАЛЬНА СУМА:";
+    data[r][colStart+4] = Math.round(d.grandTotal) + " грн.";
+    let totalSumRow = r;
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!merges'] = [
+        { s:{r:infoR,c:colStart}, e:{r:infoR,c:colStart+4} }, { s:{r:infoR+1,c:colStart}, e:{r:infoR+1,c:colStart+4} },
+        { s:{r:infoR+2,c:colStart}, e:{r:infoR+2,c:colStart+4} }, { s:{r:infoR+3,c:colStart}, e:{r:infoR+3,c:colStart+4} },
+        { s:{r:infoR+4,c:colStart}, e:{r:infoR+4,c:colStart+4} }, { s:{r:infoR+6,c:colStart}, e:{r:infoR+6,c:colStart+4} },
+        { s:{r:start1,c:colStart}, e:{r:start1,c:colStart+4} }, { s:{r:start2,c:colStart}, e:{r:start2,c:colStart+4} },
+        { s:{r:totalSumRow,c:colStart+1}, e:{r:totalSumRow,c:colStart+3} }
+    ];
+    ws['!cols'] = [{wch:2}, {wch:2}, {wch:2}, {wch:2}, {wch:6}, {wch:75}, {wch:14}, {wch:12}, {wch:18}];
+
+    for(let currR=0; currR < 80; currR++){
+        for(let currC=colStart; currC <= colStart+4; currC++){
+            let ref = XLSX.utils.encode_cell({r:currR, c:currC});
+            if(!ws[ref]) continue;
+            let isTable = (currR >= start1 && currR <= end1) || (currR >= start2 && currR <= end2);
+            if(isTable){
+                ws[ref].s = { border: border, alignment: { vertical: "center", wrapText: true, horizontal: (currC === colStart+1 ? "left" : "center") }, font: { sz: 10 } };
+                if(currR === start1 || currR === start2){ ws[ref].s.font = { bold: true, sz: 11 }; ws[ref].s.fill = { fgColor: { rgb: "F2F2F2" } }; }
+                if(currR === head1 || currR === head2 || data[currR][colStart+3] === "Всього:"){ ws[ref].s.font.bold = true; }
+            }
+            if(currR === totalSumRow){ ws[ref].s = { font: { bold: true, sz: 12 }, alignment: { horizontal: (currC === colStart+4 ? "center" : "right"), vertical: "center" } }; }
+            if(currR >= infoR && currR <= infoR+4) { ws[ref].s = { font: { bold: (currR === infoR), sz: 9 }, alignment: { horizontal: "left" } }; }
+            if(currR === infoR+6) { ws[ref].s = { font: { bold: true, sz: 12 }, alignment: { horizontal: "center" } }; }
+        }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Розрахунок");
+    XLSX.writeFile(wb, name + ".xlsx");
+}
+
+function toggleParapet(){ parapet = !parapet; updateBtn("parapetBtn"); calculate(); }
+function toggleInstallSections(){ installSections = !installSections; updateBtn("installSectionsBtn"); calculate(); }
+function toggleInstallParapet(){ installParapet = !installParapet; updateBtn("installParapetBtn"); calculate(); }
+function toggleAssembly(){ assembly = !assembly; updateBtn("assemblyBtn"); calculate(); }
+function toggleFoundation(){ foundation = !foundation; updateBtn("foundationBtn"); calculate(); }
+function updateBtn(id) { document.getElementById(id).classList.toggle("active"); }
+function applyHeightToAll(){ let h = Number(applyHeightInput.value); if(h > 0) { sections.forEach(s => s.h = h); renderSections(); calculate(); } }
+renderSections();
+</script>
+</body>
+</html>
